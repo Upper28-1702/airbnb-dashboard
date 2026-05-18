@@ -671,7 +671,7 @@ const reservas = [
 ];
 
 // KPIs operativos fijos
-const GASTO_FIJO_MES  = 945.00;   // Luz+Claro+Nexo+Hospitable+Netflix+Arbitrios+Disney prorate
+const GASTO_FIJO_MES  = 924.00;   // Luz 121.73 + Claro 85 + Nexo 443 + Hospitable 115.47 + Netflix 56.98 + Disney 659.95/12 + Muni 139.02/3
 const GASTO_VAR_MES   = 223.00;   // suministros clasificados / 3 meses (S/ 670.19 / 3)
 const COSTO_LIMPIEZA  = 128.36;
 const TOTAL_LIMPIEZAS = 8;
@@ -680,9 +680,9 @@ const TOTAL_LIMPIEZAS = 8;
 // Fijos: utilities (Luz+Claro) + condo (Nexo) + suscripciones (Netflix+Hospitable) + impuestos (Muni)
 // Variables: suministros + limpiezas + lavandería
 const gastosMes = [
-  { mes:'Marzo',  fijos:1406.46, variables:765.49 },  // +Claro1/6 +Netflix +Disney +limpieza Fernando
-  { mes:'Abril',  fijos:806.65, variables:663.80 },  // suministros S/178.80 + limpiezas S/485
-  { mes:'Mayo',   fijos:1061.02, variables:267.80 },  // suministros S/75.90 + limpiezas S/191.90
+  { mes:'Marzo',  fijos:707.95,  variables:765.49 },  // Luz 39.50 + Claro 85 + Netflix 54.90 + Nexo Ene+Feb 427.21 + Disney 55 + Muni 46.34
+  { mes:'Abril',  fijos:992.99,  variables:663.80 },  // Luz 130.30 + Claro 170 + Hospitable 114.23 + Netflix 63.13 + Nexo 413.99 + Disney 55 + Muni 46.34
+  { mes:'Mayo',   fijos:1116.02, variables:267.80 },  // Luz 195.40 + Claro 85 + Hospitable 116.70 + Netflix 52.90 + Nexo 472 + Disney 55 + Muni 139.02
 ];
 
 // Desglose por partida (período completo mar–may)
@@ -765,7 +765,7 @@ function renderKPIMain(){
 // ─── KPI OPERATIVOS (3) ───────────────────────────────────────────────
 function renderKPIOps(){
   document.getElementById('kpiOps').innerHTML = [
-    {lbl:'Gasto fijo mensual',     val:fmt(GASTO_FIJO_MES), sub:'Luz + Claro + Nexo + Hospitable + Netflix + Arbitrios + Disney+', color:'red'},
+    {lbl:'Gasto fijo mensual',     val:fmt(GASTO_FIJO_MES), sub:'Luz + Claro + Nexo + Hospitable + Netflix + Disney+/12 + Muni/3', color:'red'},
     {lbl:'Gasto variable mensual', val:fmt(GASTO_VAR_MES),  sub:'suministros clasificados · promedio 3 meses',    color:'amber'},
     {lbl:'Costo por limpieza',     val:fmt(COSTO_LIMPIEZA), sub:`promedio ${TOTAL_LIMPIEZAS} servicios · incl. lavandería`, color:'blue'},
   ].map(k=>`<div class="kpi-card ${k.color}">
