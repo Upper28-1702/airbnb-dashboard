@@ -5,7 +5,66 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard AirBnB — Miraflores</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js">
+// ─── MOBILE ──────────────────────────────────────────────────────────
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const open = sb.style.transform === 'translateX(0px)';
+  sb.style.transform = open ? '' : 'translateX(0px)';
+  sb.style.display = 'flex';
+  ov.classList.toggle('show', !open);
+}
+function closeSidebar(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  sb.style.transform = '';
+  ov.classList.remove('show');
+}
+function quickFilterMob(btn, q){
+  document.querySelectorAll('.qbtn-mob').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // sync desktop buttons too
+  document.querySelectorAll('.qbtn').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('onclick') && b.getAttribute('onclick').includes("'"+q+"'"));
+  });
+  const r={all:['2026-03-16','2026-06-14'],mar:['2026-03-16','2026-03-31'],
+            abr:['2026-04-01','2026-04-30'],may:['2026-05-01','2026-05-31'],jun:['2026-06-01','2026-06-14']};
+  document.getElementById('fDesde').value=r[q][0];
+  document.getElementById('fHasta').value=r[q][1];
+  renderAll();
+  closeSidebar();
+}
+// sync mobile label
+const origUpdateLabels = updateLabels;
+function updateLabels(){
+  origUpdateLabels();
+  const d=document.getElementById('fDesde').value, h=document.getElementById('fHasta').value;
+  const el=document.getElementById('rangoLabelMob');
+  if(el) el.textContent=fmtDate(d)+' — '+fmtDate(h);
+}
+// hide sidebar off-screen on mobile initially
+(function(){
+  if(window.innerWidth<=600){
+    const sb=document.getElementById('sidebar');
+    sb.style.transform='translateX(-100%)';
+    sb.style.display='flex';
+  }
+})();
+window.addEventListener('resize',function(){
+  const sb=document.getElementById('sidebar');
+  if(window.innerWidth>600){
+    sb.style.transform='';
+    sb.style.display='';
+    document.getElementById('overlay').classList.remove('show');
+  } else {
+    if(!document.getElementById('overlay').classList.contains('show')){
+      sb.style.transform='translateX(-100%)';
+      sb.style.display='flex';
+    }
+  }
+});
+</script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{
@@ -20,11 +79,12 @@
     --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
     --radius:10px;--radius-sm:6px;
     --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+    --sb-width:230px;
   }
   body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
 
   /* ── SIDEBAR ── */
-  #sidebar{width:230px;min-width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow:hidden;z-index:100}
+  #sidebar{width:var(--sb-width);min-width:var(--sb-width);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow:hidden;z-index:200;transition:transform .28s ease}
   .sb-header{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
   .sb-logo{display:flex;align-items:center;gap:9px;margin-bottom:12px}
   .sb-logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:600;flex-shrink:0}
@@ -51,14 +111,31 @@
   .status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
+  /* ── OVERLAY (mobile) ── */
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;opacity:0;transition:opacity .28s}
+  #overlay.show{display:block;opacity:1}
+
+  /* ── MOBILE TOP BAR ── */
+  #topbar{display:none;position:fixed;top:0;left:0;right:0;height:52px;background:var(--surface);border-bottom:1px solid var(--border);z-index:150;align-items:center;padding:0 14px;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  #topbar .tb-title{flex:1;font-size:14px;font-weight:600;color:var(--text)}
+  #topbar .tb-sub{font-size:10px;color:var(--text2)}
+  .hamburger{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;display:flex;flex-direction:column;gap:4px}
+  .hamburger span{display:block;width:20px;height:2px;background:var(--text);border-radius:1px;transition:.2s}
+
+  /* ── FILTER BAR (mobile) ── */
+  #filterbar{display:none;position:fixed;top:52px;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:140;padding:8px 14px;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #filterbar::-webkit-scrollbar{display:none}
+  .qbtn-mob{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .qbtn-mob.active{background:var(--green-light);border-color:var(--green);color:var(--green);font-weight:500}
+
   /* ── MAIN ── */
-  #main{margin-left:230px;flex:1;padding:24px;max-width:calc(1200px + 230px)}
+  #main{margin-left:var(--sb-width);flex:1;padding:24px;max-width:calc(1200px + var(--sb-width))}
   .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
   .page-title{font-size:20px;font-weight:600}
   .page-sub{font-size:12px;color:var(--text2);margin-top:2px}
-  .date-badge{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--text2);font-family:var(--mono)}
+  .date-badge{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--text2);font-family:var(--mono);white-space:nowrap}
   .sec-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;margin-top:24px}
-  .sec-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em}
+  .sec-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
   .sec-line{flex:1;height:1px;background:var(--border)}
 
   /* ── KPI GRIDS ── */
@@ -90,10 +167,10 @@
 
   /* ── TABLE ── */
   .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-  .table-toolbar{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .table-toolbar{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
   .table-info{font-size:12px;color:var(--text2)}
   .table-count{font-weight:600;color:var(--text);font-family:var(--mono)}
-  .t-wrap{overflow-x:auto}
+  .t-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th{padding:9px 12px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
   td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
@@ -110,7 +187,7 @@
   .red-val{color:var(--red)}
   .future-row td{background:#F0FDFA;color:#0F766E}
   .future-row:hover td{background:#E0FAF4!important}
-  .dash-footer{margin-top:28px;padding:14px 0;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;justify-content:space-between}
+  .dash-footer{margin-top:28px;padding:14px 0;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
   .empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
   .tag-update{display:inline-flex;align-items:center;gap:4px;background:#FEF9EE;border:1px solid #FCD34D;border-radius:4px;padding:2px 6px;font-size:10px;color:#92400E;font-weight:500}
 
@@ -123,14 +200,67 @@
   .gasto-bar-wrap{width:80px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
   .gasto-bar{height:4px;border-radius:2px}
 
+  /* ── INLINE GRIDS (partidas, gasto+break) ── */
+  .grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid-break{display:grid;grid-template-columns:1fr 1.6fr;gap:14px;margin-top:0}
+
+  /* ── TABLET ── */
   @media(max-width:900px){
-    #sidebar{display:none}#main{margin-left:0}
+    #sidebar{display:none}
+    #main{margin-left:0}
     .kpi-grid-4,.kpi-grid-5,.kpi-grid-3{grid-template-columns:repeat(2,1fr)}
     .chart-grid-2,.chart-grid-3{grid-template-columns:1fr}
+    .grid-2col,.grid-break{grid-template-columns:1fr}
+  }
+
+  /* ── MOBILE ── */
+  @media(max-width:600px){
+    #topbar{display:flex}
+    #filterbar{display:flex}
+    #main{margin-left:0;padding:8px 10px 80px;margin-top:104px}
+    .page-header{display:none}
+    .kpi-grid-4,.kpi-grid-5,.kpi-grid-3{grid-template-columns:1fr 1fr;gap:8px}
+    .kpi-card{padding:10px 12px}
+    .kpi-val{font-size:17px}
+    .kpi-lbl{font-size:9px}
+    .kpi-sub{font-size:10px}
+    .chart-grid-2,.chart-grid-3,.grid-2col,.grid-break{grid-template-columns:1fr}
+    .chart-card{padding:12px}
+    .chart-sub{font-size:10px;margin-bottom:10px}
+    .sec-header{margin-top:18px;margin-bottom:8px}
+    th{padding:7px 8px;font-size:9px}
+    td{padding:7px 8px;font-size:11px}
+    .table-toolbar{padding:10px 12px}
+    .gasto-bar-wrap{width:50px}
+    .tag-update{display:none}
+    .date-badge{display:none}
   }
 </style>
 </head>
 <body>
+
+<!-- MOBILE TOPBAR -->
+<div id="topbar">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
+  <div>
+    <div class="tb-title">AirBnB · Miraflores</div>
+    <div class="tb-sub" id="rangoLabelMob"></div>
+  </div>
+</div>
+
+<!-- MOBILE FILTER BAR -->
+<div id="filterbar">
+  <button class="qbtn-mob active" onclick="quickFilterMob(this,'all')">Todo</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'mar')">Marzo</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'abr')">Abril</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'may')">Mayo</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'jun')">Junio</button>
+</div>
+
+<!-- SIDEBAR OVERLAY -->
+<div id="overlay" onclick="closeSidebar()"></div>
 
 <!-- SIDEBAR -->
 <aside id="sidebar">
@@ -278,81 +408,12 @@
     </div>
   </div>
 
-  <!-- Tabla de suministros -->
-  <div id="s-suministros">
-    <div class="sec-header"><span class="sec-label">Detalle de suministros</span><span class="sec-line"></span></div>
-    <div class="table-card">
-      <div class="table-toolbar">
-        <div class="table-info">Ítems clasificados como <strong>Suministro / Suministros</strong> · Total: <span class="table-count">S/ 670.19</span></div>
-        <div style="font-size:11px;color:var(--text3)">mar–may 2026 · 35 ítems</div>
-      </div>
-      <div class="t-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th><th>Proveedor</th><th>Descripción</th><th class="td-right">Costo (S/)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- MARZO -->
-            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Marzo 2026 — S/ 415.49</td></tr>
-            <tr><td class="td-mono">09/03/26</td><td>Maestro</td><td>Papel higiénico doble hoja Elite X8 Roll</td><td class="td-right td-mono">20.90</td></tr>
-            <tr><td class="td-mono">09/03/26</td><td>Maestro</td><td>Bolsa para basura rollo 35L 50u</td><td class="td-right td-mono">16.90</td></tr>
-            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Detergente líquido Ariel doble poder 2.7L</td><td class="td-right td-mono">65.90</td></tr>
-            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Jabón líquido Avena Protex 900ml</td><td class="td-right td-mono">16.89</td></tr>
-            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Desengrasante Cif crema original 750g</td><td class="td-right td-mono">14.20</td></tr>
-            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Limpiavajillas con gatillo Sapolio 650ml</td><td class="td-right td-mono">11.50</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>McColin's hierba luisa CJ100</td><td class="td-right td-mono">10.20</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>McColin's anís CJ100</td><td class="td-right td-mono">10.20</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle digest CJ100</td><td class="td-right td-mono">7.90</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle mate coca CJ100</td><td class="td-right td-mono">9.90</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle té verde CJ100</td><td class="td-right td-mono">11.90</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras shampoo rizos FR400ml</td><td class="td-right td-mono">11.30</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras shampoo rizos FR400ml</td><td class="td-right td-mono">11.30</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras acondicionador rizos FR260ml</td><td class="td-right td-mono">9.90</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras acondicionador rizos FR260ml</td><td class="td-right td-mono">9.90</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>M&amp;K azúcar blanca BL</td><td class="td-right td-mono">4.50</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Vallenorte aceite girasol 900ml</td><td class="td-right td-mono">9.50</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia comino molido 56.7g</td><td class="td-right td-mono">9.40</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia pimienta negra molida 56g</td><td class="td-right td-mono">10.60</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Rexona jabón antibacterial limp 3un</td><td class="td-right td-mono">7.20</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Rexona jabón antibacterial bambo 3un</td><td class="td-right td-mono">7.20</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia sal ajo FR 127.6g</td><td class="td-right td-mono">9.40</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Altom clóx 200g</td><td class="td-right td-mono">13.90</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Onza sal de Maras</td><td class="td-right td-mono">8.30</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Papel toalla cocina x2</td><td class="td-right td-mono">12.60</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Esponja 2 en 1</td><td class="td-right td-mono">14.90</td></tr>
-            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Bolsa de basura</td><td class="td-right td-mono">3.70</td></tr>
-            <tr><td class="td-mono">17/03/26</td><td>Sodimac</td><td>Pack bolsas</td><td class="td-right td-mono">5.90</td></tr>
-            <tr><td class="td-mono">19/03/26</td><td>Dollar City</td><td>Microfibras, balde grande, cepillo</td><td class="td-right td-mono">36.00</td></tr>
-            <tr><td class="td-mono">19/03/26</td><td>Mass</td><td>Cloro, trapos amarillos</td><td class="td-right td-mono">23.60</td></tr>
-            <!-- ABRIL -->
-            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Abril 2026 — S/ 178.80</td></tr>
-            <tr><td class="td-mono">02/04/26</td><td>DollarCity</td><td>Pelador, exprimidor, limpiatodo, spray refrescante, soporte esponja</td><td class="td-right td-mono">51.00</td></tr>
-            <tr><td class="td-mono">06/04/26</td><td>Makro</td><td>Jabón Hotelero C'EST SI BON 15g x125un</td><td class="td-right td-mono">93.70</td></tr>
-            <tr><td class="td-mono">16/04/26</td><td>Metro</td><td>Shampoo grande</td><td class="td-right td-mono">21.20</td></tr>
-            <tr><td class="td-mono">26/04/26</td><td>Tottus</td><td>Shampoo pequeño</td><td class="td-right td-mono">12.90</td></tr>
-            <!-- MAYO -->
-            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Mayo 2026 — S/ 75.90</td></tr>
-            <tr><td class="td-mono">06/05/26</td><td>DollarCity</td><td>Limpiavidrios, lavaplatos, PH, paper towel y otros</td><td class="td-right td-mono">61.00</td></tr>
-            <tr><td class="td-mono">06/05/26</td><td>Coolbox</td><td>Cable de red</td><td class="td-right td-mono">14.90</td></tr>
-            <!-- TOTAL -->
-            <tr class="total-row">
-              <td colspan="3" style="color:var(--text2)">Total suministros clasificados</td>
-              <td class="td-right td-mono green-val">670.19</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <!-- Tablas de desglose por partida -->
   <div id="s-partidas">
     <div class="sec-header"><span class="sec-label">Desglose por partida de gasto</span><span class="sec-line"></span></div>
 
     <!-- Grid 2 columnas para las tablas -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="grid-2col">
 
       <!-- LUZ DEL SUR -->
       <div class="table-card">
@@ -398,8 +459,8 @@
         <div class="t-wrap"><table>
           <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
           <tbody>
-            <tr><td class="td-mono">11/03/26</td><td>Gastos Enero</td><td class="td-right td-mono">32.98</td></tr>
-            <tr><td class="td-mono">18/03/26</td><td>Gastos Febrero</td><td class="td-right td-mono">394.23</td></tr>
+            <tr><td class="td-mono">11/03/26</td><td>Condo fee Enero</td><td class="td-right td-mono">32.98</td></tr>
+            <tr><td class="td-mono">18/03/26</td><td>Condo fee Febrero</td><td class="td-right td-mono">394.23</td></tr>
             <tr><td class="td-mono">15/04/26</td><td>Condo fee Marzo 2026</td><td class="td-right td-mono">413.99</td></tr>
             <tr><td class="td-mono">17/05/26</td><td>Condo fee Abril 2026</td><td class="td-right td-mono">472.00</td></tr>
           </tbody>
@@ -479,7 +540,7 @@
         <div class="t-wrap"><table>
           <thead><tr><th>Fecha</th><th>Proveedor</th><th>Reserva</th><th class="td-right">S/</th></tr></thead>
           <tbody>
-            <tr><td class="td-mono">19/03/26</td><td>Limpieza Claudia</td><td>Fernando Principe (#1)</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">19/03/26</td><td>Nurys Escobar</td><td>Fernando Principe (#1)</td><td class="td-right td-mono">80.00</td></tr>
             <tr><td class="td-mono">24/03/26</td><td>Nurys Escobar</td><td>Jair Odiaga (#2)</td><td class="td-right td-mono">80.00</td></tr>
             <tr><td class="td-mono">29/03/26</td><td>Nurys Escobar</td><td>Mirka Aponte (#3)</td><td class="td-right td-mono">80.00</td></tr>
             <tr><td class="td-mono">01/04/26</td><td>Rosario Cueva</td><td>Jesus Pérez (#4)</td><td class="td-right td-mono">80.00</td></tr>
@@ -515,6 +576,76 @@
 
     </div><!-- fin grid -->
   </div>
+
+  <!-- Tabla de suministros -->
+  <div id="s-suministros">
+    <div class="sec-header"><span class="sec-label">Detalle de suministros</span><span class="sec-line"></span></div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="table-info">Ítems clasificados como <strong>Suministro / Suministros</strong> · Total: <span class="table-count">S/ 670.19</span></div>
+        <div style="font-size:11px;color:var(--text3)">mar–may 2026 · 35 ítems</div>
+      </div>
+      <div class="t-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Proveedor</th><th>Descripción</th><th class="td-right">Costo (S/)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- MARZO -->
+            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Marzo 2026 — S/ 415.49</td></tr>
+            <tr><td class="td-mono">09/03/26</td><td>Maestro</td><td>Papel higiénico doble hoja Elite X8 Roll</td><td class="td-right td-mono">20.90</td></tr>
+            <tr><td class="td-mono">09/03/26</td><td>Maestro</td><td>Bolsa para basura rollo 35L 50u</td><td class="td-right td-mono">16.90</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Detergente líquido Ariel doble poder 2.7L</td><td class="td-right td-mono">65.90</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Jabón líquido Avena Protex 900ml</td><td class="td-right td-mono">16.89</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Desengrasante Cif crema original 750g</td><td class="td-right td-mono">14.20</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Limpiavajillas con gatillo Sapolio 650ml</td><td class="td-right td-mono">11.50</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>McColin's hierba luisa CJ100</td><td class="td-right td-mono">10.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>McColin's anís CJ100</td><td class="td-right td-mono">10.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle digest CJ100</td><td class="td-right td-mono">7.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle mate coca CJ100</td><td class="td-right td-mono">9.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle té verde CJ100</td><td class="td-right td-mono">11.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras shampoo rizos FR400ml</td><td class="td-right td-mono">11.30</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras shampoo rizos FR400ml</td><td class="td-right td-mono">11.30</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras acondicionador rizos FR260ml</td><td class="td-right td-mono">9.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras acondicionador rizos FR260ml</td><td class="td-right td-mono">9.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>M&amp;K azúcar blanca BL</td><td class="td-right td-mono">4.50</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Vallenorte aceite girasol 900ml</td><td class="td-right td-mono">9.50</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia comino molido 56.7g</td><td class="td-right td-mono">9.40</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia pimienta negra molida 56g</td><td class="td-right td-mono">10.60</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Rexona jabón antibacterial limp 3un</td><td class="td-right td-mono">7.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Rexona jabón antibacterial bambo 3un</td><td class="td-right td-mono">7.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia sal ajo FR 127.6g</td><td class="td-right td-mono">9.40</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Altom clóx 200g</td><td class="td-right td-mono">13.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Onza sal de Maras</td><td class="td-right td-mono">8.30</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Papel toalla cocina x2</td><td class="td-right td-mono">12.60</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Esponja 2 en 1</td><td class="td-right td-mono">14.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Bolsa de basura</td><td class="td-right td-mono">3.70</td></tr>
+            <tr><td class="td-mono">17/03/26</td><td>Sodimac</td><td>Pack bolsas</td><td class="td-right td-mono">5.90</td></tr>
+            <tr><td class="td-mono">19/03/26</td><td>Dollar City</td><td>Microfibras, balde grande, cepillo</td><td class="td-right td-mono">36.00</td></tr>
+            <tr><td class="td-mono">19/03/26</td><td>Mass</td><td>Cloro, trapos amarillos</td><td class="td-right td-mono">23.60</td></tr>
+            <!-- ABRIL -->
+            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Abril 2026 — S/ 178.80</td></tr>
+            <tr><td class="td-mono">02/04/26</td><td>DollarCity</td><td>Pelador, exprimidor, limpiatodo, spray refrescante, soporte esponja</td><td class="td-right td-mono">51.00</td></tr>
+            <tr><td class="td-mono">06/04/26</td><td>Makro</td><td>Jabón Hotelero C'EST SI BON 15g x125un</td><td class="td-right td-mono">93.70</td></tr>
+            <tr><td class="td-mono">16/04/26</td><td>Metro</td><td>Shampoo grande</td><td class="td-right td-mono">21.20</td></tr>
+            <tr><td class="td-mono">26/04/26</td><td>Tottus</td><td>Shampoo pequeño</td><td class="td-right td-mono">12.90</td></tr>
+            <!-- MAYO -->
+            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Mayo 2026 — S/ 75.90</td></tr>
+            <tr><td class="td-mono">06/05/26</td><td>DollarCity</td><td>Limpiavidrios, lavaplatos, PH, paper towel y otros</td><td class="td-right td-mono">61.00</td></tr>
+            <tr><td class="td-mono">06/05/26</td><td>Coolbox</td><td>Cable de red</td><td class="td-right td-mono">14.90</td></tr>
+            <!-- TOTAL -->
+            <tr class="total-row">
+              <td colspan="3" style="color:var(--text2)">Total suministros clasificados</td>
+              <td class="td-right td-mono green-val">670.19</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 
   <div class="dash-footer">
     <span>Última actualización: <strong>17 mayo 2026</strong> · Fuente: AirBnB Gastos e Ingresos.xlsx + Compras2</span>
