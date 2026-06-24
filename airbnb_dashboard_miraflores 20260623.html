@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard AirBnB — Miraflores</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js">
+// ─── MOBILE ──────────────────────────────────────────────────────────
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const open = sb.style.transform === 'translateX(0px)';
+  sb.style.transform = open ? '' : 'translateX(0px)';
+  sb.style.display = 'flex';
+  ov.classList.toggle('show', !open);
+}
+function closeSidebar(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  sb.style.transform = '';
+  ov.classList.remove('show');
+}
+function quickFilterMob(btn, q){
+  document.querySelectorAll('.qbtn-mob').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // sync desktop buttons too
+  document.querySelectorAll('.qbtn').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('onclick') && b.getAttribute('onclick').includes("'"+q+"'"));
+  });
+  const r={all:['2026-03-16','2026-09-05'],mar:['2026-03-16','2026-03-31'],
+            abr:['2026-04-01','2026-04-30'],may:['2026-05-01','2026-05-31'],jun:['2026-06-01','2026-06-30'],jul:['2026-07-01','2026-07-31'],sep:['2026-09-01','2026-09-05']};
+  document.getElementById('fDesde').value=r[q][0];
+  document.getElementById('fHasta').value=r[q][1];
+  renderAll();
+  closeSidebar();
+}
+// sync mobile label
+const origUpdateLabels = updateLabels;
+function updateLabels(){
+  origUpdateLabels();
+  const d=document.getElementById('fDesde').value, h=document.getElementById('fHasta').value;
+  const el=document.getElementById('rangoLabelMob');
+  if(el) el.textContent=fmtDate(d)+' — '+fmtDate(h);
+}
+// hide sidebar off-screen on mobile initially
+(function(){
+  if(window.innerWidth<=600){
+    const sb=document.getElementById('sidebar');
+    sb.style.transform='translateX(-100%)';
+    sb.style.display='flex';
+  }
+})();
+window.addEventListener('resize',function(){
+  const sb=document.getElementById('sidebar');
+  if(window.innerWidth>600){
+    sb.style.transform='';
+    sb.style.display='';
+    document.getElementById('overlay').classList.remove('show');
+  } else {
+    if(!document.getElementById('overlay').classList.contains('show')){
+      sb.style.transform='translateX(-100%)';
+      sb.style.display='flex';
+    }
+  }
+});
+</script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#F0F2F5;--surface:#FFFFFF;--surface2:#F7F8FA;--border:#E5E7EB;
+    --text:#111827;--text2:#6B7280;--text3:#9CA3AF;
+    --green:#1D9E75;--green-light:#E6F7F2;
+    --blue:#3B82F6;
+    --amber:#B45309;--amber-light:#FFFBEB;
+    --red:#D85A30;
+    --purple:#7C3AED;
+    --teal:#0F766E;--teal-light:#F0FDFA;
+    --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+    --radius:10px;--radius-sm:6px;
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+    --sb-width:230px;
+  }
+  body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
+
+  /* ── SIDEBAR ── */
+  #sidebar{width:var(--sb-width);min-width:var(--sb-width);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow:hidden;z-index:200;transition:transform .28s ease}
+  .sb-header{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+  .sb-logo{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+  .sb-logo-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:600;flex-shrink:0}
+  .sb-logo-text{font-size:13px;font-weight:600;line-height:1.3}
+  .sb-logo-sub{font-size:11px;color:var(--text2);font-weight:400}
+  .sb-address{font-size:11px;color:var(--text2);background:var(--surface2);border-radius:var(--radius-sm);padding:6px 8px;line-height:1.5}
+  .sb-section{padding:14px 18px;border-bottom:1px solid var(--border)}
+  .sb-section-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+  .filter-group{margin-bottom:10px}
+  .filter-label{font-size:11px;color:var(--text2);margin-bottom:4px;display:block}
+  .filter-input{width:100%;padding:6px 8px;font-size:12px;font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none}
+  .filter-input:focus{border-color:var(--green);box-shadow:0 0 0 2px rgba(29,158,117,.12)}
+  .quick-btns{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+  .qbtn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer;text-align:left;transition:all .15s}
+  .qbtn:hover,.qbtn.active{background:var(--green-light);border-color:var(--green);color:var(--green)}
+  .qbtn.active{font-weight:500}
+  .sb-nav{padding:10px;flex:1;overflow-y:auto}
+  .nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius-sm);font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;margin-bottom:1px}
+  .nav-item:hover{background:var(--surface2);color:var(--text)}
+  .nav-item.active{background:var(--green-light);color:var(--green);font-weight:500}
+  .nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+  .sb-footer{padding:12px 18px;border-top:1px solid var(--border)}
+  .sb-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+  /* ── OVERLAY (mobile) ── */
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;opacity:0;transition:opacity .28s}
+  #overlay.show{display:block;opacity:1}
+
+  /* ── MOBILE TOP BAR ── */
+  #topbar{display:none;position:fixed;top:0;left:0;right:0;height:52px;background:var(--surface);border-bottom:1px solid var(--border);z-index:150;align-items:center;padding:0 14px;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  #topbar .tb-title{flex:1;font-size:14px;font-weight:600;color:var(--text)}
+  #topbar .tb-sub{font-size:10px;color:var(--text2)}
+  .hamburger{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;display:flex;flex-direction:column;gap:4px}
+  .hamburger span{display:block;width:20px;height:2px;background:var(--text);border-radius:1px;transition:.2s}
+
+  /* ── FILTER BAR (mobile) ── */
+  #filterbar{display:none;position:fixed;top:52px;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:140;padding:8px 14px;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #filterbar::-webkit-scrollbar{display:none}
+  .qbtn-mob{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .qbtn-mob.active{background:var(--green-light);border-color:var(--green);color:var(--green);font-weight:500}
+
+  /* ── MAIN ── */
+  #main{margin-left:var(--sb-width);flex:1;padding:24px;max-width:calc(1200px + var(--sb-width))}
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .page-title{font-size:20px;font-weight:600}
+  .page-sub{font-size:12px;color:var(--text2);margin-top:2px}
+  .date-badge{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--text2);font-family:var(--mono);white-space:nowrap}
+  .sec-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;margin-top:24px}
+  .sec-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+  .sec-line{flex:1;height:1px;background:var(--border)}
+
+  /* ── KPI GRIDS ── */
+  .kpi-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px}
+  .kpi-grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:4px}
+  .kpi-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
+  .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+  .kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+  .kpi-card.green::before{background:var(--green)}
+  .kpi-card.blue::before{background:var(--blue)}
+  .kpi-card.amber::before{background:var(--amber)}
+  .kpi-card.red::before{background:var(--red)}
+  .kpi-card.purple::before{background:var(--purple)}
+  .kpi-card.teal::before{background:var(--teal)}
+  .kpi-lbl{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .kpi-val{font-size:22px;font-weight:600;line-height:1;font-family:var(--mono)}
+  .kpi-sub{font-size:11px;color:var(--text3);margin-top:5px;line-height:1.4}
+
+  /* ── CHARTS ── */
+  .chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .chart-grid-3{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .chart-title{font-size:12px;font-weight:600;margin-bottom:3px}
+  .chart-sub{font-size:11px;color:var(--text2);margin-bottom:14px}
+  .lgnd{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+  .ls{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+  .sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0}
+  .sw-line{width:16px;height:2px;display:inline-block;flex-shrink:0;border-radius:1px}
+
+  /* ── TABLE ── */
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .table-toolbar{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+  .table-info{font-size:12px;color:var(--text2)}
+  .table-count{font-weight:600;color:var(--text);font-family:var(--mono)}
+  .t-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{padding:9px 12px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+  tbody tr:hover td{background:var(--surface2)}
+  .td-mono{font-family:var(--mono);font-size:11px}
+  .td-right{text-align:right}
+  .total-row td{background:var(--surface2);font-weight:600;border-top:2px solid var(--border)}
+  .badge-long{background:var(--amber-light);color:var(--amber);font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;vertical-align:middle;margin-left:5px;text-transform:uppercase}
+  .badge-future{background:#F0FDFA;color:#0F766E;font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;vertical-align:middle;margin-left:5px;text-transform:uppercase}
+  .badge-canal{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:500}
+  .badge-airbnb{background:#FFE6EC;color:#E31C5F}
+  .badge-booking{background:#EFF6FF;color:#1D4ED8}
+  .green-val{color:var(--green);font-weight:500}
+  .red-val{color:var(--red)}
+  .future-row td{background:#F0FDFA;color:#0F766E}
+  .future-row:hover td{background:#E0FAF4!important}
+  .dash-footer{margin-top:28px;padding:14px 0;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+  .empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
+  .tag-update{display:inline-flex;align-items:center;gap:4px;background:#FEF9EE;border:1px solid #FCD34D;border-radius:4px;padding:2px 6px;font-size:10px;color:#92400E;font-weight:500}
+
+  /* ── GASTOS DETALLE ── */
+  .gasto-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+  .gasto-row:last-child{border-bottom:none}
+  .gasto-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .gasto-label{font-size:11px;color:var(--text2);flex:1}
+  .gasto-val{font-size:11px;font-family:var(--mono);color:var(--text);font-weight:500}
+  .gasto-bar-wrap{width:80px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+  .gasto-bar{height:4px;border-radius:2px}
+
+  /* ── INLINE GRIDS (partidas, gasto+break) ── */
+  .grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid-break{display:grid;grid-template-columns:1fr 1.6fr;gap:14px;margin-top:0}
+
+  /* ── TABLET ── */
+  @media(max-width:900px){
+    #sidebar{display:none}
+    #main{margin-left:0}
+    .kpi-grid-4,.kpi-grid-5,.kpi-grid-3{grid-template-columns:repeat(2,1fr)}
+    .chart-grid-2,.chart-grid-3{grid-template-columns:1fr}
+    .grid-2col,.grid-break{grid-template-columns:1fr}
+  }
+
+  /* ── MOBILE ── */
+  @media(max-width:600px){
+    #topbar{display:flex}
+    #filterbar{display:flex}
+    #main{margin-left:0;padding:8px 10px 80px;margin-top:104px}
+    .page-header{display:none}
+    .kpi-grid-4,.kpi-grid-5,.kpi-grid-3{grid-template-columns:1fr 1fr;gap:8px}
+    .kpi-card{padding:10px 12px}
+    .kpi-val{font-size:17px}
+    .kpi-lbl{font-size:9px}
+    .kpi-sub{font-size:10px}
+    .chart-grid-2,.chart-grid-3,.grid-2col,.grid-break{grid-template-columns:1fr}
+    .chart-card{padding:12px}
+    .chart-sub{font-size:10px;margin-bottom:10px}
+    .sec-header{margin-top:18px;margin-bottom:8px}
+    th{padding:7px 8px;font-size:9px}
+    td{padding:7px 8px;font-size:11px}
+    .table-toolbar{padding:10px 12px}
+    .gasto-bar-wrap{width:50px}
+    .tag-update{display:none}
+    .date-badge{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- MOBILE TOPBAR -->
+<div id="topbar">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
+  <div>
+    <div class="tb-title">AirBnB · Miraflores</div>
+    <div class="tb-sub" id="rangoLabelMob"></div>
+  </div>
+</div>
+
+<!-- MOBILE FILTER BAR -->
+<div id="filterbar">
+  <button class="qbtn-mob active" onclick="quickFilterMob(this,'all')">Todo</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'mar')">Marzo</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'abr')">Abril</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'may')">Mayo</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'jun')">Junio</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'jul')">Julio</button>
+  <button class="qbtn-mob" onclick="quickFilterMob(this,'sep')">Sep</button>
+</div>
+
+<!-- SIDEBAR OVERLAY -->
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">FP</div>
+      <div>
+        <div class="sb-logo-text">AirBnB Dashboard</div>
+        <div class="sb-logo-sub">Fernando Principe</div>
+      </div>
+    </div>
+    <div class="sb-address">28 de Julio 551<br>Miraflores, Lima</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-title">Filtro de fechas</div>
+    <div class="filter-group">
+      <label class="filter-label">Check-in desde</label>
+      <input type="date" id="fDesde" class="filter-input" value="2026-03-16">
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">Check-in hasta</label>
+      <input type="date" id="fHasta" class="filter-input" value="2026-09-05">
+    </div>
+    <div class="quick-btns">
+      <button class="qbtn active" onclick="quickFilter(this,'all')">Todo el período</button>
+      <button class="qbtn" onclick="quickFilter(this,'mar')">Marzo 2026</button>
+      <button class="qbtn" onclick="quickFilter(this,'abr')">Abril 2026</button>
+      <button class="qbtn" onclick="quickFilter(this,'may')">Mayo 2026</button>
+      <button class="qbtn" onclick="quickFilter(this,'jun')">Junio 2026</button>
+      <button class="qbtn" onclick="quickFilter(this,'jul')">Julio 2026</button>
+      <button class="qbtn" onclick="quickFilter(this,'sep')">Septiembre 2026</button>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-section-title" style="padding:0 8px;margin-bottom:8px">Secciones</div>
+    <div class="nav-item active" onclick="scrollToSec('s-kpi')"><span class="nav-dot"></span> KPIs principales</div>
+    <div class="nav-item" onclick="scrollToSec('s-kpi2')"><span class="nav-dot"></span> KPIs operativos</div>
+    <div class="nav-item" onclick="scrollToSec('s-ocup')"><span class="nav-dot"></span> Ocupación y ADR</div>
+    <div class="nav-item" onclick="scrollToSec('s-gastos')"><span class="nav-dot"></span> Gastos fijos y variables</div>
+    <div class="nav-item" onclick="scrollToSec('s-tabla')"><span class="nav-dot"></span> Tabla de reservas</div>
+    <div class="nav-item" onclick="scrollToSec('s-suministros')"><span class="nav-dot"></span> Detalle suministros</div>
+    <div class="nav-item" onclick="scrollToSec('s-partidas')"><span class="nav-dot"></span> Desglose por partida</div>
+  </div>
+
+  <div class="sb-footer">
+    <div class="sb-status"><span class="status-dot"></span> Apertura: 16 mar 2026</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Panel de rendimiento <span class="tag-update">✦ Actualizado 23 jun 2026</span></div>
+      <div class="page-sub" id="rangoLabel"></div>
+    </div>
+    <div class="date-badge" id="todayBadge"></div>
+  </div>
+
+  <!-- KPIs principales (4 tarjetas) -->
+  <div id="s-kpi">
+    <div class="sec-header"><span class="sec-label">KPIs principales</span><span class="sec-line"></span></div>
+    <div class="kpi-grid-5" id="kpiMain"></div>
+  </div>
+
+  <!-- KPIs operativos (3 tarjetas) -->
+  <div id="s-kpi2">
+    <div class="sec-header"><span class="sec-label">KPIs operativos — período global</span><span class="sec-line"></span></div>
+    <div class="kpi-grid-3" id="kpiOps"></div>
+  </div>
+
+  <!-- Ocupación y ADR -->
+  <div id="s-ocup">
+    <div class="sec-header"><span class="sec-label">Ocupación y tarifa promedio</span><span class="sec-line"></span></div>
+    <div class="chart-grid-3">
+      <div class="chart-card">
+        <div class="chart-title">Ocupación mensual y ADR</div>
+        <div class="chart-sub">Barras = % ocupación · Línea = tarifa promedio por noche (S/)</div>
+        <div class="lgnd">
+          <span class="ls"><span class="sw" style="background:#3B82F6"></span>Ocupación %</span>
+          <span class="ls"><span class="sw-line" style="background:#1D9E75"></span>ADR (S/)</span>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="cOcup"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Noches vendidas por mes</div>
+        <div class="chart-sub">Total de noches ocupadas por mes calendario</div>
+        <div style="position:relative;height:220px"><canvas id="cNoches"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gastos fijos y variables -->
+  <div id="s-gastos">
+    <div class="sec-header"><span class="sec-label">Gastos fijos y variables</span><span class="sec-line"></span></div>
+    <div class="chart-grid-2">
+
+      <!-- Barras apiladas por mes -->
+      <div class="chart-card">
+        <div class="chart-title">Evolución mensual de gastos</div>
+        <div class="chart-sub">Fijos (utilities + condo + suscripciones) vs. Variables (suministros + limpiezas)</div>
+        <div class="lgnd">
+          <span class="ls"><span class="sw" style="background:#D85A30"></span>Gastos fijos</span>
+          <span class="ls"><span class="sw" style="background:#B45309"></span>Gastos variables</span>
+        </div>
+        <div style="position:relative;height:240px"><canvas id="cGastosBar"></canvas></div>
+      </div>
+
+      <!-- Detalle línea por línea -->
+      <div class="chart-card">
+        <div class="chart-title">Desglose por partida — período completo</div>
+        <div class="chart-sub">Total acumulado mar–may 2026 · ordenado de mayor a menor</div>
+        <div id="gastoDetalle" style="margin-top:4px"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tabla de reservas -->
+  <div id="s-tabla">
+    <div class="sec-header"><span class="sec-label">Tabla de reservas</span><span class="sec-line"></span></div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="table-info">
+          Mostrando <span class="table-count" id="tblCount">0</span> reservas
+          <span style="color:var(--teal);font-weight:500;margin-left:6px" id="tblFutureNote"></span>
+        </div>
+        <div style="font-size:11px;color:var(--text3)" id="tblRange"></div>
+      </div>
+      <div class="t-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Huésped</th><th>Check-in</th><th>Check-out</th>
+              <th class="td-right">Noches</th><th class="td-right">ADR</th>
+              <th class="td-right">Ing. bruto</th><th class="td-right">Com. Airbnb</th>
+              <th class="td-right">Com. Admin</th><th class="td-right">Neto final</th><th>Canal</th>
+            </tr>
+          </thead>
+          <tbody id="tblBody"></tbody>
+          <tfoot id="tblFoot"></tfoot>
+        </table>
+        <div class="empty" id="tblEmpty" style="display:none">Sin reservas en el rango seleccionado.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tablas de desglose por partida -->
+  <div id="s-partidas">
+    <div class="sec-header"><span class="sec-label">Desglose por partida de gasto</span><span class="sec-line"></span></div>
+
+    <!-- Grid 2 columnas para las tablas -->
+    <div class="grid-2col">
+
+      <!-- LUZ DEL SUR -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Luz del Sur</strong> — Utilidades</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 483.60</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">25/03/26</td><td>Suministro 2318788 — Facturación marzo</td><td class="td-right td-mono">39.50</td></tr>
+            <tr><td class="td-mono">24/04/26</td><td>Suministro 2318788 — Facturación abril</td><td class="td-right td-mono">130.30</td></tr>
+            <tr><td class="td-mono">16/05/26</td><td>Suministro 2318788 — Facturación mayo</td><td class="td-right td-mono">195.40</td></tr>
+            <tr><td class="td-mono">17/06/26</td><td>Suministro 2318788 — Facturación junio</td><td class="td-right td-mono">118.40</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total · 4 facturas</td><td class="td-right td-mono green-val">483.60</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- CLARO -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Claro</strong> — Utilidades / Internet</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 425.00</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">03/03/26</td><td>Mensualidad 1/6 · Y625195276</td><td class="td-right td-mono">85.00</td></tr>
+            <tr><td class="td-mono">01/04/26</td><td>Mensualidad 2/6 · Y625195276</td><td class="td-right td-mono">85.00</td></tr>
+            <tr><td class="td-mono">24/04/26</td><td>Mensualidad 3/6 · Y625195276</td><td class="td-right td-mono">85.00</td></tr>
+            <tr><td class="td-mono">16/05/26</td><td>Mensualidad 4/6 · Y625195276</td><td class="td-right td-mono">85.00</td></tr>
+            <tr><td class="td-mono">20/06/26</td><td>Mensualidad 5/6 · Y625195276</td><td class="td-right td-mono">85.00</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total · 5 pagos</td><td class="td-right td-mono green-val">425.00</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- NEXO -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Nexo</strong> — Condo Fee</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 1,765.64</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">11/03/26</td><td>Condo fee Enero</td><td class="td-right td-mono">32.98</td></tr>
+            <tr><td class="td-mono">18/03/26</td><td>Condo fee Febrero</td><td class="td-right td-mono">394.23</td></tr>
+            <tr><td class="td-mono">15/04/26</td><td>Condo fee Marzo</td><td class="td-right td-mono">413.99</td></tr>
+            <tr><td class="td-mono">17/05/26</td><td>Condo fee Abril</td><td class="td-right td-mono">472.00</td></tr>
+            <tr><td class="td-mono">17/06/26</td><td>Condo fee Mayo 20th</td><td class="td-right td-mono">452.44</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total · 5 pagos</td><td class="td-right td-mono green-val">1,765.64</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- HOSPITABLE -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Hospitable</strong> — Suscripción</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 344.90</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">02/04/26</td><td>Suscripción mensual — Abril 2026</td><td class="td-right td-mono">114.23</td></tr>
+            <tr><td class="td-mono">04/05/26</td><td>Suscripción mensual — Mayo 2026</td><td class="td-right td-mono">116.70</td></tr>
+            <tr><td class="td-mono">04/06/26</td><td>Suscripción mensual — Junio 2026</td><td class="td-right td-mono">113.97</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total · 3 pagos</td><td class="td-right td-mono green-val">344.90</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- NETFLIX -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Netflix</strong> — Suscripción</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 223.83</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">09/03/26</td><td>Suscripción mensual — Marzo 2026</td><td class="td-right td-mono">54.90</td></tr>
+            <tr><td class="td-mono">09/04/26</td><td>Suscripción mensual — Abril 2026</td><td class="td-right td-mono">63.13</td></tr>
+            <tr><td class="td-mono">11/05/26</td><td>Suscripción mensual — Mayo 2026</td><td class="td-right td-mono">52.90</td></tr>
+            <tr><td class="td-mono">11/06/26</td><td>Suscripción mensual — Junio 2026</td><td class="td-right td-mono">52.90</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total · 4 pagos</td><td class="td-right td-mono green-val">223.83</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- DISNEY+ -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7C3AED;margin-right:6px;vertical-align:middle"></span><strong>Disney+</strong> — Suscripción anual</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 659.95</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">21/02/26</td><td>Suscripción anual — Feb 2026–Feb 2027</td><td class="td-right td-mono">659.95</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total</td><td class="td-right td-mono green-val">659.95</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- CALIDDA INSTALACIÓN -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0F766E;margin-right:6px;vertical-align:middle"></span><strong>Calidda</strong> — Instalación gas natural (inversión)</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 1,259.00</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">03/06/26</td><td>Instalación de gas natural — APT</td><td class="td-right td-mono">1,259.00</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total</td><td class="td-right td-mono green-val">1,259.00</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- FALABELLA APT -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0F766E;margin-right:6px;vertical-align:middle"></span><strong>Falabella</strong> — Pisos de baño (inversión)</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 68.70</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">11/06/26</td><td>2 pisos de baño "piedra"</td><td class="td-right td-mono">68.70</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total</td><td class="td-right td-mono green-val">68.70</td></tr></tfoot>
+        </table></div>
+      </div>
+
+
+      <!-- CALIDDA -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Calidda</strong> — Gas natural</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 3.26</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">03/06/26</td><td>Suministro 6149139 FV 07/05/26</td><td class="td-right td-mono">3.26</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total</td><td class="td-right td-mono green-val">3.26</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- SODIMAC APT -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Sodimac</strong> — APT / Otros</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 15.00</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">26/05/26</td><td>Light switch</td><td class="td-right td-mono">15.00</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total</td><td class="td-right td-mono green-val">15.00</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- MUNI MIRAFLORES -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D85A30;margin-right:6px;vertical-align:middle"></span><strong>Muni Miraflores</strong> — Impuestos</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 139.02</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">13/05/26</td><td>Arbitrios 1er trimestre 2026</td><td class="td-right td-mono">139.02</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="2">Total</td><td class="td-right td-mono green-val">139.02</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- LIMPIEZAS -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#B45309;margin-right:6px;vertical-align:middle"></span><strong>Limpiezas</strong> — Gasto variable</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 1,027.00</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Proveedor</th><th>Reserva</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">19/03/26</td><td>Nurys Escobar</td><td>Fernando Principe (#1)</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">24/03/26</td><td>Nurys Escobar</td><td>Limpieza 2 Jair Odiaga</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">29/03/26</td><td>Nurys Escobar</td><td>Limpieza 3 Mirka Apote</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">01/04/26</td><td>Rosario Cueva</td><td>Limpieza 4 Jesus</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">05/04/26</td><td>Nurys Escobar</td><td>Limpieza 5 Ignacio</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">20/04/26</td><td>Nurys Escobar</td><td>Limpieza 6 Reut</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">21/04/26</td><td>Nurys Escobar</td><td>Limpieza 7 Kelly</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">07/05/26</td><td>Nurys Escobar</td><td>Limpieza 8 Manuel</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">24/05/26</td><td>Nurys Escobar</td><td>Limpieza 9</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">25/05/26</td><td>Nurys Escobar</td><td>Limpieza 10 Fabio</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">11/06/26</td><td>Nurys Escobar</td><td>Limpieza 11 Federico</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">15/06/26</td><td>Nurys Escobar</td><td>Caja Chica (17/6)</td><td class="td-right td-mono">67.00</td></tr>
+            <tr><td class="td-mono">22/06/26</td><td>Nurys Escobar</td><td>Limpieza 12 Sandra</td><td class="td-right td-mono">80.00</td></tr>
+            <tr><td class="td-mono">22/06/26</td><td>Rosario Cueva</td><td>Limpieza 13 Jonathan</td><td class="td-right td-mono">80.00</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="3">Total · 12 limpiezas · 1 caja chica</td><td class="td-right td-mono green-val">1,027.00</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- LAVANDERÍA -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#B45309;margin-right:6px;vertical-align:middle"></span><strong>Lavandería</strong> — Gasto variable</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 626.70</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Proveedor</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">24/03/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">55.00</td></tr>
+            <tr><td class="td-mono">29/03/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">55.00</td></tr>
+            <tr><td class="td-mono">01/04/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">55.00</td></tr>
+            <tr><td class="td-mono">05/04/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">55.00</td></tr>
+            <tr><td class="td-mono">20/04/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">55.00</td></tr>
+            <tr><td class="td-mono">08/05/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">59.60</td></tr>
+            <tr><td class="td-mono">08/05/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">52.30</td></tr>
+            <tr><td class="td-mono">30/05/26</td><td>Nurys Escobar</td><td>Lavanderia</td><td class="td-right td-mono">60.00</td></tr>
+            <tr><td class="td-mono">10/06/26</td><td>Nurys Escobar</td><td>Lavanderia 11</td><td class="td-right td-mono">50.00</td></tr>
+            <tr><td class="td-mono">13/06/26</td><td>Siempre Limpios</td><td>Lavanderia (15/6)</td><td class="td-right td-mono">62.80</td></tr>
+            <tr><td class="td-mono">22/06/26</td><td>Siempre Limpios</td><td>Lavanderia</td><td class="td-right td-mono">67.00</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="3">Total · 11 servicios</td><td class="td-right td-mono green-val">626.70</td></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- TRANSPORTE -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-info"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6B7280;margin-right:6px;vertical-align:middle"></span><strong>Taxi / Movilidad</strong> — Gasto variable</div>
+          <div style="font-size:11px;color:var(--text3)">Total: <strong>S/ 40.00</strong></div>
+        </div>
+        <div class="t-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Proveedor</th><th>Descripción</th><th class="td-right">S/</th></tr></thead>
+          <tbody>
+            <tr><td class="td-mono">12/06/26</td><td>Carol Cipollina</td><td>Llevar cubrecamas al lavandero</td><td class="td-right td-mono">40.00</td></tr>
+          </tbody>
+          <tfoot><tr class="total-row"><td colspan="3">Total</td><td class="td-right td-mono green-val">40.00</td></tr></tfoot>
+        </table></div>
+      </div>
+    </div><!-- fin grid -->
+  </div>
+
+  <!-- Tabla de suministros -->
+  <div id="s-suministros">
+    <div class="sec-header"><span class="sec-label">Detalle de suministros</span><span class="sec-line"></span></div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="table-info">Ítems clasificados como <strong>Suministro / Suministros</strong> · Total: <span class="table-count">S/ 624.59</span></div>
+        <div style="font-size:11px;color:var(--text3)">mar–may 2026 · 34 ítems</div>
+      </div>
+      <div class="t-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Proveedor</th><th>Descripción</th><th class="td-right">Costo (S/)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- MARZO -->
+            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Marzo 2026 — S/ 415.49</td></tr>
+            <tr><td class="td-mono">09/03/26</td><td>Maestro</td><td>Papel higiénico doble hoja Elite X8 Roll</td><td class="td-right td-mono">20.90</td></tr>
+            <tr><td class="td-mono">09/03/26</td><td>Maestro</td><td>Bolsa para basura rollo 35L 50u</td><td class="td-right td-mono">16.90</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Detergente líquido Ariel doble poder 2.7L</td><td class="td-right td-mono">65.90</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Jabón líquido Avena Protex 900ml</td><td class="td-right td-mono">16.89</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Desengrasante Cif crema original 750g</td><td class="td-right td-mono">14.20</td></tr>
+            <tr><td class="td-mono">10/03/26</td><td>Maestro</td><td>Limpiavajillas con gatillo Sapolio 650ml</td><td class="td-right td-mono">11.50</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>McColin's hierba luisa CJ100</td><td class="td-right td-mono">10.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>McColin's anís CJ100</td><td class="td-right td-mono">10.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle digest CJ100</td><td class="td-right td-mono">7.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle mate coca CJ100</td><td class="td-right td-mono">9.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Del Valle té verde CJ100</td><td class="td-right td-mono">11.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras shampoo rizos FR400ml</td><td class="td-right td-mono">11.30</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras shampoo rizos FR400ml</td><td class="td-right td-mono">11.30</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras acondicionador rizos FR260ml</td><td class="td-right td-mono">9.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Amaras acondicionador rizos FR260ml</td><td class="td-right td-mono">9.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>M&amp;K azúcar blanca BL</td><td class="td-right td-mono">4.50</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Vallenorte aceite girasol 900ml</td><td class="td-right td-mono">9.50</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia comino molido 56.7g</td><td class="td-right td-mono">9.40</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia pimienta negra molida 56g</td><td class="td-right td-mono">10.60</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Rexona jabón antibacterial limp 3un</td><td class="td-right td-mono">7.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Rexona jabón antibacterial bambo 3un</td><td class="td-right td-mono">7.20</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Badia sal ajo FR 127.6g</td><td class="td-right td-mono">9.40</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Altom clóx 200g</td><td class="td-right td-mono">13.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>Makro</td><td>Onza sal de Maras</td><td class="td-right td-mono">8.30</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Papel toalla cocina x2</td><td class="td-right td-mono">12.60</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Esponja 2 en 1</td><td class="td-right td-mono">14.90</td></tr>
+            <tr><td class="td-mono">15/03/26</td><td>ProMart</td><td>Bolsa de basura</td><td class="td-right td-mono">3.70</td></tr>
+            <tr><td class="td-mono">17/03/26</td><td>Sodimac</td><td>Pack bolsas</td><td class="td-right td-mono">5.90</td></tr>
+            <tr><td class="td-mono">19/03/26</td><td>Dollar City</td><td>Microfibras, balde grande, cepillo</td><td class="td-right td-mono">36.00</td></tr>
+            <tr><td class="td-mono">19/03/26</td><td>Mass</td><td>Cloro, trapos amarillos</td><td class="td-right td-mono">23.60</td></tr>
+            <!-- ABRIL -->
+            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Abril 2026 — S/ 127.80</td></tr>
+            <tr><td class="td-mono">06/04/26</td><td>Makro</td><td>Jabón Hotelero C'EST SI BON 15g x125un</td><td class="td-right td-mono">93.70</td></tr>
+            <tr><td class="td-mono">16/04/26</td><td>Metro</td><td>Shampoo grande</td><td class="td-right td-mono">21.20</td></tr>
+            <tr><td class="td-mono">26/04/26</td><td>Tottus</td><td>Shampoo pequeño</td><td class="td-right td-mono">12.90</td></tr>
+            <!-- MAYO -->
+            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Mayo 2026 — S/ 61.00</td></tr>
+            <tr><td class="td-mono">06/05/26</td><td>DollarCity</td><td>Limpiavidrios, lavaplatos, PH, paper towel y otros</td><td class="td-right td-mono">61.00</td></tr>
+            <!-- JUNIO -->
+            <tr><td colspan="4" style="background:var(--surface2);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px">Junio 2026 — S/ 20.30</td></tr>
+            <tr><td class="td-mono">16/06/26</td><td>Mass</td><td>Jabón líquido y papel higiénico</td><td class="td-right td-mono">20.30</td></tr>
+            <!-- TOTAL -->
+            <tr class="total-row">
+              <td colspan="3" style="color:var(--text2)">Total suministros clasificados</td>
+              <td class="td-right td-mono green-val">624.59</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="dash-footer">
+    <span>Última actualización: <strong>23 junio 2026</strong> · Fuente: AirBnB Gastos e Ingresos.xlsx + Compras2</span>
+    <span>Apertura: 16 mar 2026 · Inversión neta: <strong>S/ 47,706</strong></span>
+  </div>
+</main>
+
+<script>
+// ─── DATOS ───────────────────────────────────────────────────────────
+const APERTURA = new Date('2026-03-16');
+
+const reservas = [
+  {id:1, huesped:'Fernando Principe', checkin:'2026-03-16', checkout:'2026-03-18', noches:2,  adr:190.00,  bruto:445.00,   comAirbnb:15.75,  comAdmin:0.00,    neto:429.25,  canal:'Airbnb',  futura:false},
+  {id:2, huesped:'Jair Odiaga',       checkin:'2026-03-21', checkout:'2026-03-24', noches:3,  adr:155.47,  bruto:536.41,   comAirbnb:18.99,  comAdmin:107.28,  neto:410.14,  canal:'Airbnb',  futura:false},
+  {id:3, huesped:'Mirka Aponte',      checkin:'2026-03-26', checkout:'2026-03-29', noches:3,  adr:158.13,  bruto:474.39,   comAirbnb:16.79,  comAdmin:94.88,   neto:362.72,  canal:'Airbnb',  futura:false},
+  {id:4, huesped:'Jesus Pérez',       checkin:'2026-03-30', checkout:'2026-04-01', noches:2,  adr:240.35,  bruto:545.70,   comAirbnb:99.81,  comAdmin:109.14,  neto:336.75,  canal:'Airbnb',  futura:false},
+  {id:5, huesped:'Ignacio Cuevas',    checkin:'2026-04-03', checkout:'2026-04-04', noches:1,  adr:160.80,  bruto:225.80,   comAirbnb:7.99,   comAdmin:45.16,   neto:172.65,  canal:'Airbnb',  futura:false},
+  {id:6, huesped:'Reut Bibi',         checkin:'2026-04-11', checkout:'2026-04-15', noches:4,  adr:251.59,  bruto:1126.35,  comAirbnb:206.00, comAdmin:225.27,  neto:695.08,  canal:'Airbnb',  futura:false},
+  {id:7, huesped:'Kelly Gomez',       checkin:'2026-04-16', checkout:'2026-04-19', noches:3,  adr:200.67,  bruto:672.01,   comAirbnb:23.79,  comAdmin:134.40,  neto:513.82,  canal:'Airbnb',  futura:false},
+  {id:8, huesped:'Manuel Feril',      checkin:'2026-04-21', checkout:'2026-05-05', noches:14, adr:173.40,  bruto:2427.60,  comAirbnb:364.14, comAdmin:485.52,  neto:1577.94, canal:'Booking', futura:false},
+  {id:9, huesped:'Fabio Salas',       checkin:'2026-05-10', checkout:'2026-05-24', noches:14, adr:364.77,  bruto:5176.78,  comAirbnb:183.25, comAdmin:1035.36, neto:3958.17, canal:'Airbnb',  futura:false},
+  {id:10,huesped:'Federico Giordani',  checkin:'2026-06-06', checkout:'2026-06-09', noches:3,  adr:242.71,  bruto:867.54,   comAirbnb:130.12, comAdmin:173.51,  neto:563.92,  canal:'Booking', futura:false},
+  {id:11,huesped:'Sandra Bechtel',    checkin:'2026-06-10', checkout:'2026-06-14', noches:5,  adr:300.00,  bruto:1620.00,  comAirbnb:296.31, comAdmin:324.00,  neto:999.69,  canal:'Airbnb',  futura:false},
+  {id:12,huesped:'Jonathan Romero',   checkin:'2026-06-17', checkout:'2026-06-21', noches:5,  adr:300.00,  bruto:1640.00,  comAirbnb:299.95, comAdmin:328.00,  neto:1012.05, canal:'Airbnb',  futura:false},
+  {id:13,huesped:'Jon Ore',           checkin:'2026-06-22', checkout:'2026-06-27', noches:5,  adr:280.00,  bruto:1540.00,  comAirbnb:281.66, comAdmin:308.00,  neto:950.34,  canal:'Airbnb',  futura:false},
+  {id:14,huesped:'Jorge Huirse',      checkin:'2026-07-02', checkout:'2026-07-04', noches:3,  adr:303.33,  bruto:1030.00,  comAirbnb:188.39, comAdmin:206.00,  neto:635.61,  canal:'Airbnb',  futura:true},
+  {id:15,huesped:'Johny Presley',     checkin:'2026-09-01', checkout:'2026-09-05', noches:4,  adr:271.22,  bruto:953.05,   comAirbnb:130.12, comAdmin:190.61,  neto:632.33,  canal:'Booking', futura:true},
+];
+
+// KPIs operativos fijos
+const GASTO_FIJO_MES  = 940.00;   // avg real Apr-Jun + Disney/12 + Muni/3
+const GASTO_VAR_MES   = 156.00;   // suministros clasificados / 4 meses (S/ 624.59 / 4)
+const COSTO_LIMPIEZA  = 118.12;   // S/ 1,653.70 / 14 servicios
+const TOTAL_LIMPIEZAS = 14;
+
+// Gastos mensuales por tipo (Compras2 + Compras)
+// Fijos: utilities (Luz+Claro) + condo (Nexo) + suscripciones (Netflix+Hospitable) + impuestos (Muni)
+// Variables: suministros + limpiezas + lavandería
+const gastosMes = [
+  { mes:'Marzo',  fijos:707.95,  variables:765.49 },  // Luz 39.50 + Claro 85 + Netflix 54.90 + Nexo Ene+Feb 427.21 + Disney 55 + Muni 46.34
+  { mes:'Abril',  fijos:992.99,  variables:612.80 },  // limpiezas 320 + lavanderia 165 + suministros 127.80
+  { mes:'Mayo',   fijos:1131.02, variables:472.90 },  // limpiezas 191.90 + May extras (80+80+60) + suministros 61.00
+  { mes:'Junio',  fijos:927.31,  variables:547.10 },  // gastos fijos jun + limpiezas/lav jun + suministros 20.30
+];
+
+// Desglose por partida (período completo mar–may)
+const gastosDetalle = [
+  { label:'Suministros',       val:624.59,  color:'#B45309' },
+  { label:'Nexo (Condo fee)',  val:1765.64, color:'#D85A30' },  // Ene+Feb+Mar+Abr+May
+  { label:'Limpiezas',         val:1027.00, color:'#B45309' },
+  { label:'Transporte',         val:40.00,   color:'#6B7280' },
+  { label:'Luz del Sur',       val:483.60,  color:'#D85A30' },
+  { label:'Lavandería',        val:626.70,  color:'#B45309' },
+  { label:'Claro',             val:425.00,  color:'#D85A30' },
+  { label:'Hospitable',        val:344.90,  color:'#D85A30' },
+  { label:'Muni Miraflores',   val:139.02,  color:'#D85A30' },
+  { label:'Calidda (Gas)',      val:3.26,    color:'#D85A30' },
+  { label:'Netflix',           val:223.83,  color:'#D85A30' },
+  { label:'Disney+',           val:659.95,  color:'#7C3AED' },
+];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────
+const fmt    = n => 'S/ ' + n.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtN   = n => n.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const parseD = s => new Date(s + 'T00:00:00');
+const fmtDate= s => { const p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0].slice(2); };
+
+function filteredReservas(){
+  const d = parseD(document.getElementById('fDesde').value);
+  const h = parseD(document.getElementById('fHasta').value);
+  return reservas.filter(r => { const ci=parseD(r.checkin); return ci>=d && ci<=h; });
+}
+
+function diasDisp(desde, hasta){
+  const d0 = desde < APERTURA ? APERTURA : desde;
+  return Math.max(0, Math.round((hasta - d0)/86400000)+1);
+}
+
+// Gastos totales del período según meses solapados con el filtro
+const mesMapa = {
+  'Marzo': {ini:'2026-03-01', fin:'2026-03-31'},
+  'Abril': {ini:'2026-04-01', fin:'2026-04-30'},
+  'Mayo':  {ini:'2026-05-01', fin:'2026-05-31'},
+  'Junio': {ini:'2026-06-01', fin:'2026-06-30'},
+};
+function gastosPeriodo(desde, hasta){
+  return gastosMes.reduce((tot, m) => {
+    const mIni = parseD(mesMapa[m.mes].ini);
+    const mFin = parseD(mesMapa[m.mes].fin);
+    // Proporción del mes que cae dentro del rango
+    const solapIni = desde > mIni ? desde : mIni;
+    const solapFin = hasta < mFin ? hasta : mFin;
+    const diasMes  = Math.round((mFin - mIni)/86400000) + 1;
+    const diasSolap = Math.max(0, Math.round((solapFin - solapIni)/86400000) + 1);
+    const prop = diasSolap / diasMes;
+    return tot + (m.fijos + m.variables) * prop;
+  }, 0);
+}
+
+// ─── KPI PRINCIPALES (5) ──────────────────────────────────────────────
+function renderKPIMain(){
+  const rs    = filteredReservas().filter(r=>!r.futura);
+  const desde = parseD(document.getElementById('fDesde').value);
+  const hasta = parseD(document.getElementById('fHasta').value);
+  const dd    = diasDisp(desde, hasta);
+  const neto  = rs.reduce((a,r)=>a+r.neto,0);
+  const noch  = rs.reduce((a,r)=>a+r.noches,0);
+  const ocup  = dd>0 ? noch/dd*100 : 0;
+  const adr   = noch>0 ? rs.reduce((a,r)=>a+r.adr*r.noches,0)/noch : 0;
+  const gastos= gastosPeriodo(desde, hasta);
+  const netoGastos = neto - gastos;
+
+  document.getElementById('kpiMain').innerHTML = [
+    {lbl:'Ingreso neto final',            val:fmt(neto),                  sub:`${rs.length} reserva${rs.length!==1?'s':''} completadas`,   color:'green'},
+    {lbl:'Ingreso neto después de gastos',val:fmt(netoGastos),            sub:`gastos período: ${fmt(gastos)}`,                            color: netoGastos>=0 ? 'teal' : 'red'},
+    {lbl:'Noches vendidas',               val:noch+' / '+dd,              sub:'vendidas / días disponibles',                               color:'blue'},
+    {lbl:'Tasa de ocupación',             val:ocup.toFixed(1)+'%',        sub:'% días del período con huésped',                           color:'purple'},
+    {lbl:'ADR — Tarifa prom./noche',      val:fmt(adr),                   sub:'precio promedio ponderado',                                color:'amber'},
+  ].map(k=>`<div class="kpi-card ${k.color}">
+    <div class="kpi-lbl">${k.lbl}</div>
+    <div class="kpi-val">${k.val}</div>
+    <div class="kpi-sub">${k.sub}</div>
+  </div>`).join('');
+}
+
+// ─── KPI OPERATIVOS (3) ───────────────────────────────────────────────
+function renderKPIOps(){
+  document.getElementById('kpiOps').innerHTML = [
+    {lbl:'Gasto fijo mensual',     val:fmt(GASTO_FIJO_MES), sub:'Luz + Claro + Nexo + Hospitable + Netflix + Disney+/12 + Muni/3', color:'red'},
+    {lbl:'Gasto variable mensual', val:fmt(GASTO_VAR_MES),  sub:'suministros clasificados · promedio 3 meses',    color:'amber'},
+    {lbl:'Costo por limpieza',     val:fmt(COSTO_LIMPIEZA), sub:`promedio ${TOTAL_LIMPIEZAS} servicios · incl. lavandería`, color:'blue'},
+  ].map(k=>`<div class="kpi-card ${k.color}">
+    <div class="kpi-lbl">${k.lbl}</div>
+    <div class="kpi-val">${k.val}</div>
+    <div class="kpi-sub">${k.sub}</div>
+  </div>`).join('');
+}
+
+// ─── TABLA ────────────────────────────────────────────────────────────
+function renderTabla(){
+  const rs = filteredReservas();
+  const fut = rs.filter(r=>r.futura);
+  document.getElementById('tblCount').textContent = rs.length;
+  document.getElementById('tblFutureNote').textContent = fut.length ? `· ${fut.length} reserva futura incluida` : '';
+  document.getElementById('tblRange').textContent =
+    `Check-in: ${fmtDate(document.getElementById('fDesde').value)} — ${fmtDate(document.getElementById('fHasta').value)}`;
+
+  const body=document.getElementById('tblBody'), foot=document.getElementById('tblFoot'), emp=document.getElementById('tblEmpty');
+  if(!rs.length){ body.innerHTML=''; foot.innerHTML=''; emp.style.display='block'; return; }
+  emp.style.display='none';
+
+  body.innerHTML = rs.map(r=>{
+    const bLarga = r.noches>=7 ? `<span class="badge-long">Larga estancia</span>` : '';
+    const bFut   = r.futura   ? `<span class="badge-future">Confirmada</span>` : '';
+    const bCanal = r.canal==='Airbnb'
+      ? `<span class="badge-canal badge-airbnb">Airbnb</span>`
+      : `<span class="badge-canal badge-booking">Booking</span>`;
+    return `<tr ${r.futura?'class="future-row"':''}>
+      <td style="color:var(--text3);font-family:var(--mono)">${r.id}</td>
+      <td>${r.huesped}${bLarga}${bFut}</td>
+      <td class="td-mono">${fmtDate(r.checkin)}</td>
+      <td class="td-mono">${fmtDate(r.checkout)}</td>
+      <td class="td-right td-mono">${r.noches}</td>
+      <td class="td-right td-mono">${fmtN(r.adr)}</td>
+      <td class="td-right td-mono">${fmtN(r.bruto)}</td>
+      <td class="td-right td-mono red-val">${fmtN(r.comAirbnb)}</td>
+      <td class="td-right td-mono" style="color:var(--amber)">${fmtN(r.comAdmin)}</td>
+      <td class="td-right td-mono green-val"><strong>${fmtN(r.neto)}</strong></td>
+      <td>${bCanal}</td>
+    </tr>`;
+  }).join('');
+
+  const tB=rs.reduce((a,r)=>a+r.bruto,0), tCA=rs.reduce((a,r)=>a+r.comAirbnb,0),
+        tCM=rs.reduce((a,r)=>a+r.comAdmin,0), tN=rs.reduce((a,r)=>a+r.neto,0),
+        tNo=rs.reduce((a,r)=>a+r.noches,0);
+  foot.innerHTML=`<tr class="total-row">
+    <td colspan="4" style="color:var(--text2)">Totales</td>
+    <td class="td-right td-mono">${tNo}</td><td></td>
+    <td class="td-right td-mono">${fmtN(tB)}</td>
+    <td class="td-right td-mono red-val">${fmtN(tCA)}</td>
+    <td class="td-right td-mono" style="color:var(--amber)">${fmtN(tCM)}</td>
+    <td class="td-right td-mono green-val">${fmtN(tN)}</td>
+    <td></td>
+  </tr>`;
+}
+
+// ─── CHARTS ───────────────────────────────────────────────────────────
+let charts={};
+function dc(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function renderCharts(){
+  // Ocupación + ADR
+  dc('ocup');
+  charts.ocup = new Chart(document.getElementById('cOcup'),{
+    type:'bar',
+    data:{
+      labels:['Marzo','Abril','Mayo','Junio'],
+      datasets:[
+        {data:[50,73.3,100,60],backgroundColor:['#3B82F655','#3B82F677','#3B82F699','#3B82F6'],borderWidth:0,borderRadius:4,yAxisID:'y',order:2},
+        {data:[167.87,213.75,269.08,284.90],type:'line',borderColor:'#1D9E75',backgroundColor:'transparent',
+         pointBackgroundColor:'#1D9E75',pointRadius:5,yAxisID:'y2',tension:.3,borderWidth:2.5,order:1}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
+        callbacks:{label:ctx=>ctx.datasetIndex===0?'Ocupación: '+ctx.parsed.y+'%':'ADR: S/ '+ctx.parsed.y.toFixed(2)}}},
+      scales:{
+        y:{max:110,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'#E5E7EB'}},
+        y2:{position:'right',ticks:{callback:v=>'S/ '+v,font:{size:11}},grid:{drawOnChartArea:false}}
+      }}
+  });
+
+  // Noches
+  dc('noches');
+  charts.noches = new Chart(document.getElementById('cNoches'),{
+    type:'bar',
+    data:{labels:['Marzo','Abril','Mayo','Junio'],
+      datasets:[{data:[8,22,16,18],backgroundColor:['#1D9E7544','#1D9E7566','#1D9E7588','#1D9E75'],borderWidth:0,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.y+' noches'}}},
+      scales:{y:{ticks:{font:{size:11},stepSize:5},grid:{color:'#E5E7EB'}},x:{ticks:{font:{size:11}}}}}
+  });
+
+  // Gastos fijos vs variables por mes (barras apiladas)
+  dc('gastosBar');
+  charts.gastosBar = new Chart(document.getElementById('cGastosBar'),{
+    type:'bar',
+    data:{
+      labels: gastosMes.map(m=>m.mes),
+      datasets:[
+        {label:'Gastos fijos',     data:gastosMes.map(m=>m.fijos),     backgroundColor:'#D85A30BB',borderWidth:0,borderRadius:[4,4,0,0],stack:'g'},
+        {label:'Gastos variables', data:gastosMes.map(m=>m.variables), backgroundColor:'#B45309BB',borderWidth:0,borderRadius:[4,4,0,0],stack:'g'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
+        callbacks:{
+          label:ctx=>`${ctx.dataset.label}: S/ ${ctx.parsed.y.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}`,
+          footer:items=>`Total: S/ ${items.reduce((a,i)=>a+i.parsed.y,0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}`
+        }
+      }},
+      scales:{
+        x:{ticks:{font:{size:11}},grid:{color:'#E5E7EB'},stacked:true},
+        y:{ticks:{callback:v=>'S/ '+v.toLocaleString(),font:{size:11}},grid:{color:'#E5E7EB'},stacked:true}
+      }}
+  });
+
+  // Desglose por partida (barras horizontales en HTML)
+  const maxVal = Math.max(...gastosDetalle.map(g=>g.val));
+  document.getElementById('gastoDetalle').innerHTML = gastosDetalle.map(g=>`
+    <div class="gasto-row">
+      <span class="gasto-dot" style="background:${g.color}"></span>
+      <span class="gasto-label">${g.label}</span>
+      <div class="gasto-bar-wrap">
+        <div class="gasto-bar" style="width:${(g.val/maxVal*100).toFixed(1)}%;background:${g.color}88"></div>
+      </div>
+      <span class="gasto-val">${fmt(g.val)}</span>
+    </div>`).join('');
+}
+
+// ─── LABELS ───────────────────────────────────────────────────────────
+function updateLabels(){
+  const d=document.getElementById('fDesde').value, h=document.getElementById('fHasta').value;
+  document.getElementById('rangoLabel').textContent=`Período seleccionado · ${fmtDate(d)} — ${fmtDate(h)}`;
+}
+
+function renderAll(){
+  updateLabels(); renderKPIMain(); renderKPIOps(); renderTabla(); renderCharts();
+}
+
+function quickFilter(btn,q){
+  document.querySelectorAll('.qbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const r={all:['2026-03-16','2026-09-05'],mar:['2026-03-16','2026-03-31'],
+            abr:['2026-04-01','2026-04-30'],may:['2026-05-01','2026-05-31'],jun:['2026-06-01','2026-06-30'],jul:['2026-07-01','2026-07-31'],sep:['2026-09-01','2026-09-05']};
+  document.getElementById('fDesde').value=r[q][0];
+  document.getElementById('fHasta').value=r[q][1];
+  renderAll();
+}
+
+function scrollToSec(id){ document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'}); }
+
+['fDesde','fHasta'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
+  document.querySelectorAll('.qbtn').forEach(b=>b.classList.remove('active'));
+  renderAll();
+}));
+
+document.getElementById('todayBadge').textContent =
+  new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+
+renderAll();
+</script>
+</body>
+</html>
